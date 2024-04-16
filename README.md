@@ -1,1 +1,1 @@
-This repository contains a selection of key functions from the client-side API of ceserver. It includes primary functionalities to read from and write to memory, as well as to list processes. Feel free to submit pull requests if you wish to implement additional functions.
+This repository contains a selection of key functions from the client-side API of ceserver. It includes primary functionalities to read and write to memory, as well as to list processes. Feel free to submit pull requests if you wish to implement additional functions.
