@@ -1,8 +1,10 @@
 from socket import socket, AF_INET, SOCK_STREAM
-from commands import CESERVER_COMMAND as CE_CMD
-from structs import CeVersion, CeProcessEntry, CeReadProcessMemoryInput
 import struct
 import logging
+
+from commands import CESERVER_COMMAND as CE_CMD
+from structs import CeVersion, CeProcessEntry, CeReadProcessMemoryInput
+from data_classes import ProcessInfo
 
 
 class CEServerClient:
@@ -48,7 +50,7 @@ class CEServerClient:
         self._sock.close()
         self.log.info("Disconnected.")
 
-    def enumerate_processes(self):
+    def enumerate_processes(self) -> list[ProcessInfo]:
         # Paso 1: snapshot
         self._send_command(CE_CMD.CMD_CREATETOOLHELP32SNAPSHOTEX, b"\x02\x00\x00\x00\x00\x00\x00\x00")
         snapshot_handle = self._sock.recv(4)
@@ -58,13 +60,13 @@ class CEServerClient:
         ce_process_entry = self._recv_process_entry()
         if ce_process_entry.result:
             process_name = self._sock.recv(ce_process_entry.processnamesize)
-            processes.append((ce_process_entry.pid, process_name.decode()))
+            processes.append(ProcessInfo(ce_process_entry.pid, process_name.decode()))
             while ce_process_entry.result:
                 self._sock.sendall(CE_CMD.CMD_PROCESS32NEXT.to_bytes() + snapshot_handle)
                 ce_process_entry = self._recv_process_entry()
                 if ce_process_entry.result:
                     process_name = self._sock.recv(ce_process_entry.processnamesize)
-                    processes.append((ce_process_entry.pid, process_name.decode()))
+                    processes.append(ProcessInfo(ce_process_entry.pid, process_name.decode()))
         self.close_handle(snapshot_handle)
 
         return processes
@@ -80,7 +82,9 @@ class CEServerClient:
 
     def get_handle(self, process_name: str):
         processes_list = self.enumerate_processes()
-        for pid, name in processes_list:
+        for process_info in processes_list:
+            name = process_info.name
+            pid = process_info.pid
             if process_name in name:
                 self.pid = pid
                 self.open_process()
