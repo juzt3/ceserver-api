@@ -1,11 +1,13 @@
-from socket import socket, AF_INET, SOCK_STREAM
-import struct
 import logging
+import struct
+import time
+from socket import socket, AF_INET, SOCK_STREAM
 
 from commands import CeserverCommand as CE_CMD
-from structs import CeVersion, CeProcessEntry, CeReadProcessMemoryInput, CeModuleEntry, CeCreateToolhelp32Snapshot
-from port_help import TH32CS
 from data_classes import ProcessInfo, ModuleInfo
+from port_help import TH32CS, PageProtection
+from structs import (CeVersion, CeProcessEntry, CeReadProcessMemoryInput, CeModuleEntry, CeCreateToolhelp32Snapshot,
+                     CeAobScanInput)
 
 
 class CEServerClient:
@@ -129,7 +131,7 @@ class CEServerClient:
         return None
 
     def close_handle(self, handle: bytes):
-        self._sock.sendall(CE_CMD.CMD_CLOSEHANDLE.to_bytes() + handle)
+        self._send_command(CE_CMD.CMD_CLOSEHANDLE, handle)
         self._sock.recv(4)
 
     def get_handle(self, process_name: str):
@@ -146,7 +148,8 @@ class CEServerClient:
 
     def open_process(self):
         self._send_command(CE_CMD.CMD_OPENPROCESS, self.pid.to_bytes(4, byteorder='little'))
-        self.handle = struct.unpack("<L", self._sock.recv(4))[0]
+        raw_handle = self._sock.recv(4)
+        self.handle = struct.unpack("<L", raw_handle)[0]
 
     def read_process_memory(self, address: int, size: int, compress: int = 0) -> bytes | None:
         data = {

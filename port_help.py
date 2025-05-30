@@ -7,9 +7,6 @@ class TH32CS(IntFlag):
     SNAPMODULE = 0x8
     SNAPFIRSTMODULE = 0x40000000
 
-    def to_little_endian(self):
-        return self.to_bytes(4, byteorder='little')
-
 
 class PageProtection(IntFlag):
     NOACCESS = 0x1
