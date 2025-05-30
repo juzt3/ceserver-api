@@ -3,8 +3,8 @@ import struct
 import logging
 
 from commands import CeserverCommand as CE_CMD
-from structs import CeVersion, CeProcessEntry, CeReadProcessMemoryInput
-from data_classes import ProcessInfo
+from structs import CeVersion, CeProcessEntry, CeReadProcessMemoryInput, CeModuleEntry
+from data_classes import ProcessInfo, ModuleInfo
 
 
 class CEServerClient:
@@ -61,25 +61,63 @@ class CEServerClient:
         snapshot_handle = self._sock.recv(4)
         processes = []
         # next process
-        self._sock.sendall(CE_CMD.CMD_PROCESS32FIRST.to_bytes() + snapshot_handle)
+        self._send_command(CE_CMD.CMD_PROCESS32FIRST, snapshot_handle)
         ce_process_entry = self._recv_process_entry()
         if ce_process_entry.result:
-            process_name = self._sock.recv(ce_process_entry.processnamesize)
-            processes.append(ProcessInfo(ce_process_entry.pid, process_name.decode()))
+            process_name = self._sock.recv(ce_process_entry.processnamesize).decode()
+            name = process_name.split()[-1].split('/')[-1]
+            processes.append(ProcessInfo(ce_process_entry.pid, name))
             while ce_process_entry.result:
-                self._sock.sendall(CE_CMD.CMD_PROCESS32NEXT.to_bytes() + snapshot_handle)
+                self._send_command(CE_CMD.CMD_PROCESS32NEXT, snapshot_handle)
                 ce_process_entry = self._recv_process_entry()
                 if ce_process_entry.result:
-                    process_name = self._sock.recv(ce_process_entry.processnamesize)
-                    processes.append(ProcessInfo(ce_process_entry.pid, process_name.decode()))
+                    process_name = self._sock.recv(ce_process_entry.processnamesize).decode()
+                    name = process_name.split()[-1].split('/')[-1]
+                    processes.append(ProcessInfo(ce_process_entry.pid, name))
         self.close_handle(snapshot_handle)
 
         return processes
 
     def _recv_process_entry(self) -> CeProcessEntry:
-        data = self._sock.recv(CeProcessEntry.sizeof())
+        size = CeProcessEntry.sizeof()
+        data = self._sock.recv(size)
         ce_process_entry = CeProcessEntry.parse(data)
         return ce_process_entry
+
+    def enumerate_modules(self) -> list[ModuleInfo]:
+        modules = []
+        # next module
+        pid = self.pid.to_bytes(4, byteorder='little')
+        self._send_command(CE_CMD.CMD_CREATETOOLHELP32SNAPSHOTEX, b"\x18\x00\x00\x00"+pid)
+        ce_module_entry = self._recv_module_entry()
+        while ce_module_entry.result:
+            module_name = self._sock.recv(ce_module_entry.modulenamesize).decode()
+            if module_name != "[vdso]":
+                name = module_name.split('/')[-1]
+                modules.append(ModuleInfo(
+                    ce_module_entry.modulebase,
+                    ce_module_entry.modulepart,
+                    ce_module_entry.modulesize,
+                    ce_module_entry.modulefileoffset,
+                    name
+                ))
+            ce_module_entry = self._recv_module_entry()
+
+        return modules
+
+    def _recv_module_entry(self) -> CeModuleEntry:
+        size = CeModuleEntry.sizeof()
+        data = self._sock.recv(size)
+        ce_module_entry = CeModuleEntry.parse(data)
+        return ce_module_entry
+
+    def get_module_base(self, module_name: str) -> int | None:
+        modules = self.enumerate_modules()
+        for module in modules:
+            if module_name in module.name:
+                self.log.info(f"Module found: {hex(module.base)} - {module.name}")
+                return module.base
+        return None
 
     def close_handle(self, handle: bytes):
         self._sock.sendall(CE_CMD.CMD_CLOSEHANDLE.to_bytes() + handle)
@@ -93,7 +131,7 @@ class CEServerClient:
             if process_name in name:
                 self.pid = pid
                 self.open_process()
-                self.log.info(f"Process found: {pid}-{name}")
+                self.log.info(f"Process found: {pid} - {name}")
                 return
         raise Exception("Process not found.")
 
