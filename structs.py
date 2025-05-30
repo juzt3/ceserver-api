@@ -87,7 +87,7 @@ CeWriteProcessMemoryOutput = Struct(
 
 # CeSetBreapointInput (corrigiendo el typo en el nombre)
 CeSetBreakpointInput = Struct(
-    "hProcess" / Int64ul,  # HANDLE en 64-bit
+    "hProcess" / Int32ul,
     "tid" / Int32sl,
     "debugreg" / Int32sl,
     "Address" / Int64ul,
@@ -102,7 +102,7 @@ CeSetBreakpointOutput = Struct(
 
 # CeRemoveBreapointInput
 CeRemoveBreakpointInput = Struct(
-    "hProcess" / Int64ul,  # HANDLE en 64-bit
+    "hProcess" / Int32ul,
     "tid" / Int32ul,
     "debugreg" / Int32ul,
     "wasWatchpoint" / Int32ul,
@@ -115,7 +115,7 @@ CeRemoveBreakpointOutput = Struct(
 
 # CeSuspendThreadInput
 CeSuspendThreadInput = Struct(
-    "hProcess" / Int64ul,  # HANDLE en 64-bit
+    "hProcess" / Int32ul,
     "tid" / Int32sl,
 )
 
@@ -126,7 +126,7 @@ CeSuspendThreadOutput = Struct(
 
 # CeResumeThreadInput
 CeResumeThreadInput = Struct(
-    "hProcess" / Int64ul,  # HANDLE en 64-bit
+    "hProcess" / Int32ul,
     "tid" / Int32sl,
 )
 
@@ -137,7 +137,7 @@ CeResumeThreadOutput = Struct(
 
 # CeAllocInput
 CeAllocInput = Struct(
-    "hProcess" / Int64ul,  # HANDLE en 64-bit
+    "hProcess" / Int32ul,
     "preferedBase" / Int64ul,
     "size" / Int32ul,
     "windowsprotection" / Int32ul,
@@ -150,7 +150,7 @@ CeAllocOutput = Struct(
 
 # CeFreeInput
 CeFreeInput = Struct(
-    "hProcess" / Int64ul,  # HANDLE en 64-bit
+    "hProcess" / Int32ul,
     "address" / Int64ul,
     "size" / Int32ul,
 )
@@ -162,26 +162,26 @@ CeFreeOutput = Struct(
 
 # CeCreateThreadInput
 CeCreateThreadInput = Struct(
-    "hProcess" / Int64ul,  # HANDLE en 64-bit
+    "hProcess" / Int32ul,
     "startaddress" / Int64ul,
     "parameter" / Int64ul,
 )
 
 # CeCreateThreadOutput
 CeCreateThreadOutput = Struct(
-    "threadhandle" / Int64ul,  # HANDLE en 64-bit
+    "threadhandle" / Int32ul,
 )
 
 # CeLoadModuleInput
 CeLoadModuleInput = Struct(
-    "hProcess" / Int64ul,  # HANDLE en 64-bit
+    "hProcess" / Int32ul,
     "modulepathlength" / Int32ul,
     # modulepath se lee por separado usando modulepathlength
 )
 
 # CeLoadModuleInputEx
 CeLoadModuleInputEx = Struct(
-    "hProcess" / Int64ul,  # HANDLE en 64-bit
+    "hProcess" / Int32ul,
     "dlopenaddress" / Int64ul,
     "modulepathlength" / Int32ul,
     # modulepath se lee por separado usando modulepathlength
@@ -194,7 +194,7 @@ CeLoadModuleOutput = Struct(
 
 # CeSpeedhackSetSpeedInput
 CeSpeedhackSetSpeedInput = Struct(
-    "hProcess" / Int64ul,  # HANDLE en 64-bit
+    "hProcess" / Int32ul,
     "speed" / Float32l,
 )
 
@@ -205,7 +205,7 @@ CeSpeedhackSetSpeedOutput = Struct(
 
 # CeChangeMemoryProtection
 CeChangeMemoryProtection = Struct(
-    "hProcess" / Int64ul,  # HANDLE en 64-bit
+    "hProcess" / Int32ul,
     "address" / Int64ul,
     "size" / Int32ul,
     "windowsprotection" / Int32ul,
@@ -213,14 +213,14 @@ CeChangeMemoryProtection = Struct(
 
 # CeReadPipe
 CeReadPipe = Struct(
-    "hPipe" / Int64ul,  # HANDLE en 64-bit
+    "hPipe" / Int32ul,
     "size" / Int32ul,
     "timeout" / Int32ul,
 )
 
 # CeWritePipe
 CeWritePipe = Struct(
-    "hPipe" / Int64ul,  # HANDLE en 64-bit
+    "hPipe" / Int32ul,
     "size" / Int32ul,
     "timeout" / Int32ul,
     # data[size] se lee por separado usando size
@@ -228,7 +228,7 @@ CeWritePipe = Struct(
 
 # CeAobScanInput
 CeAobScanInput = Struct(
-    "hProcess" / Int64ul,  # HANDLE en 64-bit
+    "hProcess" / Int32ul,
     "start" / Int64ul,
     "end" / Int64ul,
     "inc" / Int32sl,
