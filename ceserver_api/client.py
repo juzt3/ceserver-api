@@ -1,13 +1,11 @@
 import logging
 import struct
-import time
 from socket import socket, AF_INET, SOCK_STREAM
 
-from commands import CeserverCommand as CE_CMD
-from data_classes import ProcessInfo, ModuleInfo
-from port_help import TH32CS, PageProtection
-from structs import (CeVersion, CeProcessEntry, CeReadProcessMemoryInput, CeModuleEntry, CeCreateToolhelp32Snapshot,
-                     CeAobScanInput)
+from .commands import CeserverCommand as CE_CMD
+from .data_classes import ProcessInfo, ModuleInfo
+from .port_help import TH32CS
+from .structs import CeVersion, CeProcessEntry, CeReadProcessMemoryInput, CeModuleEntry, CeCreateToolhelp32Snapshot
 
 
 class CEServerClient:

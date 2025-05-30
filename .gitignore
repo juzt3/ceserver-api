@@ -1,3 +1,5 @@
 /.idea
 /__pycache__
 testing.py
+/dist
+/ceserver_api.egg-info
