@@ -12,6 +12,13 @@ class CEServerClient:
         self.pid: int | None = None
         self.handle: int | None = None
 
+    def __enter__(self):
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.disconnect()
+
     def send_command(self, command: CE_CMD, payload=b''):
         self.sock.sendall(command.to_bytes()+payload)
 
@@ -96,3 +103,9 @@ class CEServerClient:
         if value is None:
             return None
         return struct.unpack("<L", value)[0]
+
+    def read_float(self, address: int, compress: int = 0) -> float | None:
+        value = self.read_process_memory(address, 4, compress)
+        if value is None:
+            return None
+        return struct.unpack("<f", value)[0]
