@@ -1,4 +1,4 @@
-from construct import *
+from construct import Struct, Int32sl, Int8ul, Int32ul, Int64sl, Int64ul, Float32l
 
 # CeVersion
 CeVersion = Struct(

@@ -75,7 +75,7 @@ class CEServerClient:
         self.send_command(CE_CMD.CMD_OPENPROCESS, self.pid.to_bytes(4, byteorder='little'))
         self.handle = struct.unpack("<L", self.sock.recv(4))[0]
 
-    def read_process_memory(self, address: int, size: int, compress=0) -> bytes | None:
+    def read_process_memory(self, address: int, size: int, compress:int = 0) -> bytes | None:
         data = {
             "handle": self.handle,
             "address": address,
@@ -91,7 +91,7 @@ class CEServerClient:
         value = self.sock.recv(response_size)
         return value
 
-    def read_int32(self, address: int, compress=0) -> int | None:
+    def read_int32(self, address: int, compress: int = 0) -> int | None:
         value = self.read_process_memory(address, 4, compress)
         if value is None:
             return None
