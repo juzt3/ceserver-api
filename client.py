@@ -26,7 +26,7 @@ class CEServerClient:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.disconnect()
 
-    def send_command(self, command: CE_CMD, payload=b''):
+    def _send_command(self, command: CE_CMD, payload=b''):
         self._sock.sendall(command.to_bytes() + payload)
 
     def connect(self):
@@ -37,39 +37,42 @@ class CEServerClient:
         self.get_version()
 
     def get_version(self):
-        self.send_command(CE_CMD.CMD_GETVERSION)
+        self._send_command(CE_CMD.CMD_GETVERSION)
         data = self._sock.recv(CeVersion.sizeof())
         ce_version = CeVersion.parse(data)
         version_string = self._sock.recv(ce_version.stringsize)
         self.log.info(f"Server version: {version_string.decode()}")
 
     def disconnect(self):
-        self.send_command(CE_CMD.CMD_CLOSECONNECTION)
+        self._send_command(CE_CMD.CMD_CLOSECONNECTION)
         self._sock.close()
         self.log.info("Disconnected.")
 
     def enumerate_processes(self):
         # Paso 1: snapshot
-        self._sock.sendall(CE_CMD.CMD_CREATETOOLHELP32SNAPSHOTEX.to_bytes() + b"\x02\x00\x00\x00\x00\x00\x00\x00")
-        handle = self._sock.recv(4)
+        self._send_command(CE_CMD.CMD_CREATETOOLHELP32SNAPSHOTEX, b"\x02\x00\x00\x00\x00\x00\x00\x00")
+        snapshot_handle = self._sock.recv(4)
         processes = []
         # next process
-        self._sock.sendall(CE_CMD.CMD_PROCESS32FIRST.to_bytes() + handle)
-        data = self._sock.recv(CeProcessEntry.sizeof())
-        ce_process_entry = CeProcessEntry.parse(data)
+        self._sock.sendall(CE_CMD.CMD_PROCESS32FIRST.to_bytes() + snapshot_handle)
+        ce_process_entry = self._recv_process_entry()
         if ce_process_entry.result:
             process_name = self._sock.recv(ce_process_entry.processnamesize)
             processes.append((ce_process_entry.pid, process_name.decode()))
             while ce_process_entry.result:
-                self._sock.sendall(CE_CMD.CMD_PROCESS32NEXT.to_bytes() + handle)
-                data = self._sock.recv(CeProcessEntry.sizeof())
-                ce_process_entry = CeProcessEntry.parse(data)
+                self._sock.sendall(CE_CMD.CMD_PROCESS32NEXT.to_bytes() + snapshot_handle)
+                ce_process_entry = self._recv_process_entry()
                 if ce_process_entry.result:
                     process_name = self._sock.recv(ce_process_entry.processnamesize)
                     processes.append((ce_process_entry.pid, process_name.decode()))
-        self.close_handle(handle)
+        self.close_handle(snapshot_handle)
 
         return processes
+
+    def _recv_process_entry(self) -> CeProcessEntry:
+        data = self._sock.recv(CeProcessEntry.sizeof())
+        ce_process_entry = CeProcessEntry.parse(data)
+        return ce_process_entry
 
     def close_handle(self, handle: bytes):
         self._sock.sendall(CE_CMD.CMD_CLOSEHANDLE.to_bytes() + handle)
@@ -86,7 +89,7 @@ class CEServerClient:
         raise Exception("Process not found.")
 
     def open_process(self):
-        self.send_command(CE_CMD.CMD_OPENPROCESS, self.pid.to_bytes(4, byteorder='little'))
+        self._send_command(CE_CMD.CMD_OPENPROCESS, self.pid.to_bytes(4, byteorder='little'))
         self.handle = struct.unpack("<L", self._sock.recv(4))[0]
 
     def read_process_memory(self, address: int, size: int, compress:int = 0) -> bytes | None:
@@ -98,7 +101,11 @@ class CEServerClient:
         }
 
         payload = CeReadProcessMemoryInput.build(data)
-        self.send_command(CE_CMD.CMD_READPROCESSMEMORY, payload)
+        self._send_command(CE_CMD.CMD_READPROCESSMEMORY, payload)
+        value = self._recv_read_response()
+        return value
+
+    def _recv_read_response(self) -> bytes | None:
         response_size = struct.unpack("<L", self._sock.recv(4))[0]
         if response_size == 0:
             return
