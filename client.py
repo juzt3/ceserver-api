@@ -3,7 +3,8 @@ import struct
 import logging
 
 from commands import CeserverCommand as CE_CMD
-from structs import CeVersion, CeProcessEntry, CeReadProcessMemoryInput, CeModuleEntry
+from structs import CeVersion, CeProcessEntry, CeReadProcessMemoryInput, CeModuleEntry, CeCreateToolhelp32Snapshot
+from port_help import TH32CS
 from data_classes import ProcessInfo, ModuleInfo
 
 
@@ -57,7 +58,12 @@ class CEServerClient:
 
     def enumerate_processes(self) -> list[ProcessInfo]:
         # Paso 1: snapshot
-        self._send_command(CE_CMD.CMD_CREATETOOLHELP32SNAPSHOTEX, b"\x02\x00\x00\x00\x00\x00\x00\x00")
+        data = {
+            "dwFlags": TH32CS.SNAPPROCESS,
+            "th32ProcessID": 0
+        }
+        payload = CeCreateToolhelp32Snapshot.build(data)
+        self._send_command(CE_CMD.CMD_CREATETOOLHELP32SNAPSHOTEX, payload)
         snapshot_handle = self._sock.recv(4)
         processes = []
         # next process
@@ -85,10 +91,13 @@ class CEServerClient:
         return ce_process_entry
 
     def enumerate_modules(self) -> list[ModuleInfo]:
+        data = {
+            "dwFlags": TH32CS.SNAPMODULE,
+            "th32ProcessID": self.pid
+        }
+        payload = CeCreateToolhelp32Snapshot.build(data)
+        self._send_command(CE_CMD.CMD_CREATETOOLHELP32SNAPSHOTEX, payload)
         modules = []
-        # next module
-        pid = self.pid.to_bytes(4, byteorder='little')
-        self._send_command(CE_CMD.CMD_CREATETOOLHELP32SNAPSHOTEX, b"\x18\x00\x00\x00"+pid)
         ce_module_entry = self._recv_module_entry()
         while ce_module_entry.result:
             module_name = self._sock.recv(ce_module_entry.modulenamesize).decode()
