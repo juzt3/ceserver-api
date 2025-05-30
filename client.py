@@ -31,7 +31,7 @@ class CEServerClient:
 
     def connect(self):
         self._sock = socket(AF_INET, SOCK_STREAM)
-        self._sock.settimeout(0.1)
+        self._sock.settimeout(2)
         self._sock.connect((self.host, self.port))
         self.log.info(f"Connected to ceserver in {self.host}:{self.port}")
         self.get_version()
