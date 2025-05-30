@@ -2,7 +2,7 @@ from enum import IntEnum
 import struct
 
 
-class CESERVER_COMMAND(IntEnum):
+class CeserverCommand(IntEnum):
     CMD_GETVERSION = 0
     CMD_CLOSECONNECTION = 1
     CMD_TERMINATESERVER = 2
@@ -62,6 +62,7 @@ class CESERVER_COMMAND(IntEnum):
     CMD_AOBSCAN = 200
     CMD_COMMANDLIST2 = 255
 
-    def to_bytes(self):
-        """Convierte el enum a 1 byte en big-endian"""
+    def to_bytes(self, **kwargs):
+        """Convierte el enum a 1 byte en big-endian
+        """
         return struct.pack('>B', self)

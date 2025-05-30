@@ -2,7 +2,7 @@ from socket import socket, AF_INET, SOCK_STREAM
 import struct
 import logging
 
-from commands import CESERVER_COMMAND as CE_CMD
+from commands import CeserverCommand as CE_CMD
 from structs import CeVersion, CeProcessEntry, CeReadProcessMemoryInput
 from data_classes import ProcessInfo
 
@@ -96,7 +96,7 @@ class CEServerClient:
         self._send_command(CE_CMD.CMD_OPENPROCESS, self.pid.to_bytes(4, byteorder='little'))
         self.handle = struct.unpack("<L", self._sock.recv(4))[0]
 
-    def read_process_memory(self, address: int, size: int, compress:int = 0) -> bytes | None:
+    def read_process_memory(self, address: int, size: int, compress: int = 0) -> bytes | None:
         data = {
             "handle": self.handle,
             "address": address,
