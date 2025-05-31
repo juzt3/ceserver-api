@@ -236,7 +236,6 @@ class CEServerClient:
     def read_ptr(self, address: int, compress: int = 0) -> int | None:
         ptr = self.read_uint64(address, compress)
         MIN_ADDR = 0x10000
-        # Likely an invalid pointer
         if ptr is None or ptr < MIN_ADDR:
             return None
         return ptr
@@ -249,3 +248,51 @@ class CEServerClient:
                 return None
             addr = ptr
         return addr
+
+    def _recv_string16(self) -> str:
+        length_bytes = self._sock.recv(2)
+        length = struct.unpack('<H', length_bytes)[0]
+        raw = self._sock.recv(length)
+        return raw.decode('utf-8', errors='replace')
+
+    def get_options(self) -> list[dict]:
+        self._send_command(CE_CMD.CMD_GETOPTIONS, b'\x00\x00\x00')
+
+        count_data = self._sock.recv(2)
+        option_count = struct.unpack('<H', count_data)[0]
+
+        options = []
+        for i in range(option_count):
+            opt = {
+                "name": self._recv_string16(),
+                "parent": self._recv_string16(),
+                "description": self._recv_string16(),
+                "acceptable_values": self._recv_string16(),
+                "current_value": self._recv_string16(),
+                "type": struct.unpack('<I', self._sock.recv(4))[0],
+            }
+            options.append(opt)
+
+        return options
+
+    def _send_string16(self, text: str):
+        encoded = text.encode('utf-8')
+        length = len(encoded)
+        self._sock.sendall(struct.pack('<H', length))
+        if length:
+            self._sock.sendall(encoded)
+
+    def get_option_value(self, option_name: str) -> str | None:
+        self._send_command(CE_CMD.CMD_GETOPTIONVALUE)
+
+        self._send_string16(option_name)
+
+        result = self._recv_string16()
+        return result if result else None
+
+    def set_option_value(self, option_name: str, value: str):
+        self._send_command(CE_CMD.CMD_SETOPTIONVALUE)
+
+        # 2. Enviar optname y value como string16 (uint16_len + utf-8 bytes)
+        self._send_string16(option_name)
+        self._send_string16(value)

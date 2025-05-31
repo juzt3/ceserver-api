@@ -3,3 +3,4 @@
 testing.py
 /dist
 /ceserver_api.egg-info
+/ceserver_api/__pycache__
