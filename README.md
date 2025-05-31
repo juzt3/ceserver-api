@@ -22,6 +22,4 @@ The end goal is to provide a standalone Python library that can be used to inter
 
 ## 🛠️ Installation
 
-<code>
-pip install ceserver-api
-</code>
+<code>pip install ceserver-api</code>
