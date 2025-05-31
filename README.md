@@ -22,4 +22,6 @@ The end goal is to provide a standalone Python library that can be used to inter
 
 ## 🛠️ Installation
 
-Coming soon to PyPI!
+<code>
+pip install ceserver-api
+</code>

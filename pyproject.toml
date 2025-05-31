@@ -1,7 +1,7 @@
 [project]
 name = "ceserver-api"
-version = "0.1.2"
-description = "Cliente Python para comunicarse con ceserver de Cheat Engine"
+version = "0.1.0"
+description = "Python Client to comunicate with Cheat Engine's ceserver"
 readme = "README.md"
 license = { text = "BSD" }
 authors = [{ name = "Felipe Gatica", email = "felipeparagati@gmail.com" }]
