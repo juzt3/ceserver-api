@@ -5,7 +5,7 @@ from socket import socket, AF_INET, SOCK_STREAM
 from .commands import CeserverCommand as CE_CMD
 from .data_classes import ProcessInfo, ModuleInfo
 from .port_help import TH32CS
-from .structs import CeVersion, CeProcessEntry, CeReadProcessMemoryInput, CeModuleEntry, CeCreateToolhelp32Snapshot
+from .structs import CeVersion, CeProcessEntry, CeReadProcessMemoryInput, CeModuleEntry, CeCreateToolhelp32Snapshot, CeWriteProcessMemoryInput, CeWriteProcessMemoryOutput
 
 
 class CEServerClient:
@@ -149,7 +149,8 @@ class CEServerClient:
         raw_handle = self._sock.recv(4)
         self.handle = struct.unpack("<L", raw_handle)[0]
 
-    def read_process_memory(self, address: int, size: int, compress: int = 0) -> bytes | None:
+    # Read Section
+    def _read_process_memory(self, address: int, size: int, compress: int = 0) -> bytes | None:
         data = {
             "handle": self.handle,
             "address": address,
@@ -170,13 +171,13 @@ class CEServerClient:
         return value
 
     def read_byte(self, address: int, compress: int = 0) -> int | None:
-        data = self.read_process_memory(address, 1, compress)
+        data = self._read_process_memory(address, 1, compress)
         if data is None:
             return None
         return struct.unpack('<B', data)[0]
 
     def read_int16(self, address: int, compress: int = 0, signed: bool = True) -> int | None:
-        data = self.read_process_memory(address, 2, compress)
+        data = self._read_process_memory(address, 2, compress)
         if data is None:
             return None
         fmt = "<h" if signed else "<H"
@@ -186,7 +187,7 @@ class CEServerClient:
         return self.read_int16(address, compress, False)
 
     def read_int32(self, address: int, compress: int = 0, signed: bool = True) -> int | None:
-        value = self.read_process_memory(address, 4, compress)
+        value = self._read_process_memory(address, 4, compress)
         if value is None:
             return None
         fmt = "<l" if signed else "<L"
@@ -196,7 +197,7 @@ class CEServerClient:
         return self.read_int32(address, compress, False)
 
     def read_int64(self, address: int, compress: int = 0, signed: bool = True) -> int | None:
-        value = self.read_process_memory(address, 8, compress)
+        value = self._read_process_memory(address, 8, compress)
         if value is None:
             return None
         fmt = "<q" if signed else "<Q"
@@ -206,19 +207,19 @@ class CEServerClient:
         return self.read_int64(address, compress, False)
 
     def read_float(self, address: int, compress: int = 0) -> float | None:
-        value = self.read_process_memory(address, 4, compress)
+        value = self._read_process_memory(address, 4, compress)
         if value is None:
             return None
         return struct.unpack("<f", value)[0]
 
     def read_double(self, address: int, compress: int = 0) -> float | None:
-        value = self.read_process_memory(address, 8, compress)
+        value = self._read_process_memory(address, 8, compress)
         if value is None:
             return None
         return struct.unpack("<d", value)[0]
 
     def read_bytes(self, address: int, length: int, compress: int = 0):
-        return self.read_process_memory(address, length, compress)
+        return self._read_process_memory(address, length, compress)
 
     def read_str(self, address: int, length: int = 256, unicode=False, compress: int = 0) -> str | None:
         data = self.read_bytes(address, length, compress)
@@ -249,6 +250,87 @@ class CEServerClient:
             addr = ptr
         return addr
 
+    # Write Section
+    def _write_process_memory(self, address: int, size: int, value: bytes) -> CeWriteProcessMemoryOutput:
+        data = {
+            "handle": self.handle,
+            "address": address,
+            "size": size,
+        }
+
+        payload = CeWriteProcessMemoryInput.build(data)
+        self._send_command(CE_CMD.CMD_WRITEPROCESSMEMORY, payload)
+        self._sock.sendall(value)
+        response = self._recv_write_response()
+        return response
+
+    def _recv_write_response(self) -> CeWriteProcessMemoryOutput:
+        r_size = CeWriteProcessMemoryOutput.sizeof()
+        r_bytes = self._sock.recv(r_size)
+        response = CeWriteProcessMemoryOutput.parse(r_bytes)
+        return response
+
+    def write_bytes(self, address: int, value: bytes) -> CeWriteProcessMemoryOutput:
+        size = len(value)
+        return self._write_process_memory(address, size, value)
+
+    def write_byte(self, address: int, value: bytes) -> CeWriteProcessMemoryOutput:
+        size = len(value)
+        if size > 1:
+            raise Exception("The value to send exceeds the size of a single byte")
+        return self._write_process_memory(address, size, value)
+
+    def write_int16(self, address: int, value: int, signed=True) -> CeWriteProcessMemoryOutput:
+        s_bytes = value.to_bytes(2, byteorder='little', signed=signed)
+        size = len(s_bytes)
+        if size > 2:
+            raise Exception("The value to send exceeds the size of an int16")
+        return self._write_process_memory(address, size, s_bytes)
+
+    def write_uint16(self, address: int, value: int) -> CeWriteProcessMemoryOutput:
+        return self.write_int16(address, value, signed=False)
+
+    def write_int32(self, address: int, value: int, signed=True) -> CeWriteProcessMemoryOutput:
+        s_bytes = value.to_bytes(4, byteorder='little', signed=signed)
+        size = len(s_bytes)
+        if size > 4:
+            raise Exception("The value to send exceeds the size of an int32")
+        return self._write_process_memory(address, size, s_bytes)
+
+    def write_uint32(self, address: int, value: int) -> CeWriteProcessMemoryOutput:
+        return self.write_int32(address, value, signed=False)
+
+    def write_int64(self, address: int, value: int, signed=True) -> CeWriteProcessMemoryOutput:
+        s_bytes = value.to_bytes(8, byteorder='little', signed=signed)
+        size = len(s_bytes)
+        if size > 8:
+            raise Exception("The value to send exceeds the size of an int64")
+        return self._write_process_memory(address, size, s_bytes)
+
+    def write_uint64(self, address: int, value: int) -> CeWriteProcessMemoryOutput:
+        return self.write_int64(address, value, signed=False)
+
+    def write_float(self, address: int, value: float) -> CeWriteProcessMemoryOutput:
+        s_bytes = struct.pack('<f', value)
+        size = len(s_bytes)
+        if size > 4:
+            raise Exception("The value to send exceeds the size of a float")
+        return self._write_process_memory(address, size, s_bytes)
+
+    def write_double(self, address: int, value: float) -> CeWriteProcessMemoryOutput:
+        s_bytes = struct.pack('<d', value)
+        size = len(s_bytes)
+        if size > 8:
+            raise Exception("The value to send exceeds the size of a double")
+        return self._write_process_memory(address, size, s_bytes)
+
+    def write_str(self, address: int, value: str, unicode=False) -> CeWriteProcessMemoryOutput:
+        encode = 'utf-8' if not unicode else 'utf-16'
+        s_bytes = value.encode(encoding=encode)
+        size = len(s_bytes)
+        return self._write_process_memory(address, size, s_bytes)
+
+    # Options Section
     def _recv_string16(self) -> str:
         length_bytes = self._sock.recv(2)
         length = struct.unpack('<H', length_bytes)[0]

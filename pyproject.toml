@@ -1,6 +1,6 @@
 [project]
 name = "ceserver-api"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python Client to comunicate with Cheat Engine's ceserver"
 readme = "README.md"
 license = { text = "BSD" }
